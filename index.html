@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
     
-    <title>IPTV SMARTERS PRO</title>
+    <title>IPTV MAX PRO</title>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@
             -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none;           
         }
         
-        /* OTIMIZAÇÃO DE MEMÓRIA PARA A PHILCO (GPU liberada) */
+        /* OTIMIZAÇÃO DE MEMÓRIA E ACELERAÇÃO DE HARDWARE EXTREMA */
         html, body {
             background: #000000; 
             color: #ffffff; font-family: 'Montserrat', sans-serif;
@@ -41,21 +41,27 @@
         .cat-list, .item-list, .meta { 
             overflow-y: auto; 
             -webkit-overflow-scrolling: touch; 
+            will-change: transform; transform: translateZ(0); /* Aceleração GPU */
         }
 
-        /* OTIMIZAÇÃO FOCO EXTREMA - Sem sombras, sem escala (Rápido na TV) */
+        /* OTIMIZAÇÃO FOCO EXTREMA - Sem sombras, Rápido na TV */
         .focused { 
             border: 3px solid #fff !important; 
             background: #FFD700 !important; 
             color: #000 !important; 
             z-index: 50; 
             box-shadow: none !important;
-            transform: none !important;
+            transform: translateZ(0) !important;
         }
         .focused i, .focused span, .focused div { color: #000 !important; }
         
         #vid-box.focused { border: 4px solid var(--gold-main) !important; background: transparent !important; }
-        #vid-box.fs, #vid-box.fs.focused { border: none !important; width: 100% !important; height: 100% !important; z-index: 9999 !important; position: fixed !important; top: 0 !important; left: 0 !important; background: #000 !important; }
+        #vid-box.fs, #vid-box.fs.focused { border: none !important; width: 100% !important; height: 100% !important; z-index: 9999 !important; position: fixed !important; top: 0 !important; left: 0 !important; background: #000 !important; transform: none !important; }
+
+        /* MODO CINEMA MOBILE (OPÇÃO 1 - FILL) */
+        #vid-box.fs video { 
+            object-fit: fill !important; 
+        }
 
         /* Estilos Padrão */
         .login-box { 
@@ -114,15 +120,21 @@
         .item.playing { color: var(--gold-main); background: #111; border-left: 4px solid var(--gold-main); }
         .fav-icon { float: right; color: var(--gold-main); }
 
-        /* PLAYER LIMPO E ESCURO */
+        /* PLAYER OTIMIZADO - HARDWARE ACCEL */
         .vid-box { 
             width: 100%; height: 50vh; background: #000; position: relative; border-bottom: 2px solid #222; overflow: hidden; 
-            touch-action: manipulation; 
+            touch-action: manipulation; transform: translateZ(0); 
         }
         
-        #player-container { width:100%; height:100%; background:#000; }
+        #player-container { width:100%; height:100%; background:#000; transform: translateZ(0); }
         video { 
-            width: 100%; height: 100%; object-fit: fill; background: #000; z-index: 1;
+            width: 100%; height: 100%; object-fit: contain; background: #000; z-index: 1; transform: translateZ(0);
+        }
+
+        /* ANTI-TELA PRETA - FREEZE FRAME DO ENTERPRISE */
+        #freeze-frame {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5;
+            display: none; object-fit: contain; pointer-events: none;
         }
 
         /* BUFFER INTELIGENTE */
@@ -132,7 +144,7 @@
             z-index: 50; display: none;
             flex-direction: column; align-items: center; justify-content: center;
         }
-        .buffer-msg { color: #fff; font-weight: 900; margin-top: 10px; font-size: 2vh; text-shadow: 1px 1px 0 #000; }
+        .buffer-msg { color: #fff; font-weight: 900; margin-top: 10px; font-size: 2.5vh; text-shadow: 2px 2px 4px #000; }
 
         .meta { padding: 25px; flex: 1; background: #0a0a0c; display: flex; flex-direction: column; }
         .meta-title { font-size: var(--font-lg); color: var(--gold-main); font-weight: 900; margin-bottom: 1vh; }
@@ -180,7 +192,7 @@
 
     <div id="login-layer" class="layer flex-center hide">
         <div class="login-box">
-            <div class="logo-txt"><span style="color:#fff">IPTV</span>&nbsp;<span class="gold-text">SMARTERS PRO</span></div>
+            <div class="logo-txt"><span style="color:#fff">IPTV</span>&nbsp;<span class="gold-text">MAX PRO</span></div>
             <input type="text" id="i0" class="inp focusable" placeholder="URL DNS" autocomplete="off">
             <input type="text" id="i1" class="inp focusable" placeholder="USUÁRIO" autocomplete="off">
             <input type="password" id="i2" class="inp focusable" placeholder="SENHA" autocomplete="off">
@@ -212,7 +224,7 @@
 
     <div id="dash-layer" class="layer hide">
         <div class="top-bar">
-            <div class="dash-logo"><span style="color:#fff">IPTV</span>&nbsp;<span class="gold-text">SMARTERS PRO</span></div>
+            <div class="dash-logo"><span style="color:#fff">IPTV</span>&nbsp;<span class="gold-text">MAX PRO</span></div>
             <div class="dash-clock">
                 <div id="clock-time" class="clock-time">12:00</div>
                 <div id="clock-date" class="clock-date">--/--/----</div>
@@ -256,6 +268,8 @@
                     <video id="player" playsinline webkit-playsinline></video>
                 </div>
                 
+                <canvas id="freeze-frame"></canvas>
+
                 <div id="smart-buffer" class="buffer-overlay">
                     <i class="fas fa-sync fa-spin" style="font-size: 4vh; color: var(--gold-main);"></i>
                     <div class="buffer-msg" id="buffer-text">SINAL FRACO...</div>
@@ -265,7 +279,7 @@
             </div>
             
             <div class="meta">
-                <div id="meta-title" class="meta-title"><span style="color:#fff">IPTV</span>&nbsp;SMARTERS PRO</div>
+                <div id="meta-title" class="meta-title"><span style="color:#fff">IPTV</span>&nbsp;MAX PRO</div>
                 <div id="meta-desc" class="meta-desc"></div>
                 
                 <div class="keys">
@@ -279,7 +293,7 @@
     </div>
 
     <script>
-        /* === ROBÔ TÉCNICO V10 TURBO HÍBRIDO + MODO 24H: FUSÃO SMARTERS PRO + OTIMIZAÇÃO MAX (PHILCO & MOBILE) === */
+        /* === MOTOR IPTV MAX PRO V1: HÍBRIDO SMARTERS + ENTERPRISE (ANTI-VAZAMENTO MEMÓRIA E ANTI-TELA PRETA AO VIVO) === */
         
         function safePlay(vidElement) {
             if (!vidElement) return;
@@ -319,6 +333,28 @@
 
             init: function() { this.bindVideo(); },
 
+            /* OTIMIZAÇÃO ENTERPRISE: CONGELAMENTO DE FRAME - Tira uma foto milissegundos antes da queda */
+            freezeFrame: function() {
+                var v = document.getElementById('player');
+                var c = document.getElementById('freeze-frame');
+                if(v && c && v.videoWidth > 0) {
+                    try {
+                        c.width = v.videoWidth; c.height = v.videoHeight;
+                        var ctx = c.getContext('2d');
+                        ctx.drawImage(v, 0, 0, c.width, c.height);
+                        if(c.width > 0) { c.style.display = 'block'; }
+                    } catch(e) { console.log("Erro ao salvar frame:", e); }
+                }
+            },
+            
+            clearFreeze: function() {
+                var c = document.getElementById('freeze-frame');
+                if(c) { 
+                    c.style.display = 'none'; 
+                    try { c.getContext('2d').clearRect(0, 0, c.width, c.height); } catch(e){}
+                }
+            },
+
             bindVideo: function() {
                 this.video = document.getElementById('player');
                 if(!this.video) return;
@@ -327,16 +363,15 @@
                     if (App.currentMode === 'series' && App.fullData && App.fullData[App.idx] && App.fullData[App.idx].is_episode) {
                         var nextIdx = App.idx + 1;
                         if (nextIdx < App.fullData.length) { 
-                            PlayerEngine.hardStop();
-                            setTimeout(function() { App.itemClick(nextIdx); }, 800); return; 
+                            setTimeout(function() { App.itemClick(nextIdx); }, 50); 
+                            return; 
                         }
                     }
-                    if(App.currentMode !== 'live') PlayerEngine.hardReset();
+                    if(App.currentMode !== 'live') PlayerEngine.hardStop(false, false);
                     else PlayerEngine.handleError(false); 
                 };
                 
                 this.video.onerror = function() { PlayerEngine.handleError(false); };
-                
                 this.video.addEventListener('playing', function() { PlayerEngine.onPlaySuccess(); });
                 this.video.addEventListener('waiting', function() { PlayerEngine.showBuffer('CARREGANDO...'); });
 
@@ -344,19 +379,27 @@
                 this.video.setAttribute('playsinline', 'true');
             },
 
+            /* OTIMIZAÇÃO ENTERPRISE: LIMPEZA DE MEMÓRIA DESTRUTIVA */
             resetDOM: function() {
                 var container = document.getElementById('player-container');
                 if(container) {
+                    var oldVid = document.getElementById('player');
+                    if(oldVid) { 
+                        oldVid.onerror = null; oldVid.onended = null; 
+                        oldVid.pause(); oldVid.removeAttribute('src'); 
+                        try { oldVid.load(); } catch(e){}
+                        container.removeChild(oldVid); 
+                    }
                     container.innerHTML = '';
                     var newVid = document.createElement('video');
                     newVid.id = 'player';
                     newVid.style.width = '100%';
                     newVid.style.height = '100%';
-                    newVid.style.objectFit = 'fill';
+                    newVid.style.objectFit = 'contain';
                     newVid.style.background = '#000';
+                    newVid.style.transform = 'translateZ(0)'; /* Força GPU */
                     newVid.playsInline = true;
                     newVid.webkitPlaysInline = true;
-                    newVid.poster = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
                     container.appendChild(newVid);
                     this.bindVideo();
                 }
@@ -366,23 +409,38 @@
                 if(this.url === url && this.video && !this.video.paused) return;
                 
                 var isRetry = (this.url === url);
-                this.hardStop(isRetry); 
+                
+                if(!isRetry) { 
+                    this.clearFreeze(); 
+                    if (App.currentMode === 'live') {
+                        this.resetDOM(); /* Apenas destrói e recria no Live TV para salvar a memória RAM */
+                    } else {
+                        if (this.video) { this.video.pause(); }
+                    }
+                } else { 
+                    this.hardStop(true); 
+                }
                 
                 this.url = url; this.stallCount = 0; this.retryCount = 0;
                 
-                this.showBuffer('CONECTANDO...');
+                this.showBuffer('CONECTANDO SINAL...');
                 document.getElementById('pause-layer').style.display = 'none';
                 this.startMonitor();
 
                 if(!this.video) return;
 
                 this.video.src = url; 
+                if (App.currentMode !== 'live' && !isRetry) {
+                    try { this.video.load(); } catch(e) {}
+                }
+
                 safePlay(this.video);
             },
 
             onPlaySuccess: function() {
                 this.stallCount = 0;
                 this.retryCount = 0;
+                this.clearFreeze(); /* Limpa a tela de pause/freeze */
                 this.hideBuffer();
             },
 
@@ -433,7 +491,8 @@
                     this.retryCount++;
                     this.showBuffer('RECONECTANDO (' + this.retryCount + ')...');
 
-                    if(this.retryCount > 3 || isStall) {
+                    if(this.retryCount > 2 || isStall) {
+                        this.freezeFrame(); /* OTIMIZAÇÃO: Segura o frame antes de tentar reabrir */
                         this.resetDOM();
                     }
                     
@@ -442,6 +501,7 @@
                     
                     setTimeout(function() { PlayerEngine.play(PlayerEngine.url); }, delay);
                 } else {
+                    this.clearFreeze();
                     this.hardStop();
                 }
             },
@@ -454,7 +514,7 @@
                 setTimeout(function() { PlayerEngine.play(currentUrl); }, 500); 
             },
             
-            hardStop: function(isRetry) { 
+            hardStop: function(isRetry, isMarathon) { 
                 this.stopMonitor(); 
                 if(this.video && !isRetry) { 
                     this.video.onerror = null; 
@@ -462,7 +522,9 @@
                     this.video.removeAttribute('src'); 
                     try { this.video.load(); } catch(e){} 
                 } 
+                if(isMarathon) { this.resetDOM(); }
                 if(!isRetry) {
+                    this.clearFreeze();
                     this.url = null;
                     this.hideBuffer();
                 }
@@ -526,14 +588,12 @@
                 this.applyLang(); PlayerEngine.init();
                 setInterval(this.updateClock, 1000); this.updateClock();
                 
-                // === Detector de Rolagem Infinita para o Smartphone ===
                 document.getElementById('item-list').addEventListener('scroll', function() {
                     var el = this;
                     if(el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
                         App.loadMoreMobile();
                     }
                 });
-                // =======================================================
 
                 var needsRefresh = this.checkExistingSession();
                 if(localStorage.getItem('rc_h') && !needsRefresh) {
@@ -548,6 +608,7 @@
                 localStorage.setItem('rc_session_start', this.sessionStartTime.toString()); localStorage.setItem('rc_refresh_interval', this.refreshInterval.toString());
             },
 
+            /* OTIMIZAÇÃO ENTERPRISE: Atraso Inteligente VOD e Reset Seguro LIVE */
             performAutoRefresh: function() { 
                 if (App.currentMode === 'live' && App.playingId) {
                     PlayerEngine.resetDOM(); 
@@ -556,6 +617,9 @@
                     App.sessionStartTime = Date.now();
                     if (App.refreshTimer) { clearTimeout(App.refreshTimer); }
                     App.refreshTimer = setTimeout(function() { App.performAutoRefresh(); }, App.refreshInterval);
+                } else if ((App.currentMode === 'movie' || App.currentMode === 'series') && App.playingId && PlayerEngine.video && !PlayerEngine.video.paused) { 
+                    if (App.refreshTimer) { clearTimeout(App.refreshTimer); } 
+                    App.refreshTimer = setTimeout(function() { App.performAutoRefresh(); }, 30 * 60 * 1000); 
                 } else {
                     PlayerEngine.hardStop(); 
                     localStorage.removeItem('rc_session_start'); 
@@ -686,7 +750,7 @@
                 this.req(this.creds.h+"/player_api.php?username="+this.creds.u+"&password="+this.creds.p+"&action="+actionStrm, function(d){ if(d && d!=='ERR_NET') { App.globalData = d; App.countGlobal(); } });
             },
             
-            resetInfo: function() { document.getElementById('meta-title').innerHTML = '<span style="color:#fff">IPTV</span>&nbsp;SMARTERS PRO'; document.getElementById('meta-desc').innerText = ""; var v = document.getElementById('player'); if(v){v.removeAttribute('src'); v.load();} document.getElementById('pause-layer').style.display = 'none'; },
+            resetInfo: function() { document.getElementById('meta-title').innerHTML = '<span style="color:#fff">IPTV</span>&nbsp;MAX PRO'; document.getElementById('meta-desc').innerText = ""; var v = document.getElementById('player'); if(v){v.removeAttribute('src'); v.load();} document.getElementById('pause-layer').style.display = 'none'; PlayerEngine.clearFreeze(); },
             catClick: function(i) { this.idx=i; this.zone=0; this.loadContent(i); requestNativeFullscreen(); },
 
             loadContent: function(catIdx) {
@@ -817,9 +881,7 @@
             playStream: function(item) {
                 var id = item.stream_id || item.id; var url = ""; var t = App.i18n[App.cfg.lang];
                 if (App.currentMode === 'live') {
-                    var ext = 'ts'; 
-                    if (this.cfg.format === 'm3u8_native') { ext = 'm3u8'; }
-
+                    var ext = this.cfg.format === 'm3u8_native' ? 'm3u8' : 'ts';
                     url = this.creds.h+"/live/"+this.creds.u+"/"+this.creds.p+"/"+id+"."+ext;
                     this.playingId = id; document.getElementById('meta-title').innerText = item.name || item.title; document.getElementById('meta-desc').innerText = "";
                 } else if (App.currentMode === 'movie') {
@@ -1083,7 +1145,8 @@
             if(k===406||k===66||k===275) { e.preventDefault(); App.setScr(1); } 
         });
 
-        function forceDisconnect() { PlayerEngine.hardStop(); }
+        /* OTIMIZAÇÃO: Desconecta forçado para limpar RAM */
+        function forceDisconnect() { PlayerEngine.hardStop(false, true); }
         window.addEventListener('beforeunload', forceDisconnect); window.addEventListener('unload', forceDisconnect); window.addEventListener('pagehide', forceDisconnect);
         document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'hidden') { forceDisconnect(); } });
     </script>

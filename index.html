@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
-    <title>IPTV ULTIMATE PHILCO EDITION</title>
+    
+    <title>IPTV ULTIMATE - HÍBRIDO (TV & MOBILE)</title>
     
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
@@ -16,9 +19,9 @@
             --font-xs: 1.8vh; --font-sm: 2.2vh; --font-md: 3vh; --font-lg: 5vh;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; user-select: none; }
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         
-        /* OTIMIZAÇÃO EXTREMA DE HARDWARE: Sem firulas que consomem GPU */
+        /* OTIMIZAÇÃO BASE */
         html, body {
             background: #000000; color: #ffffff; font-family: 'Montserrat', sans-serif;
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden !important;
@@ -30,11 +33,27 @@
 
         .cat-list, .item-list, .meta { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-        /* Foco simples e direto, sem sombras pesadas */
+        /* Foco leve para TV (Philco) e visual limpo para Mobile */
         .focused { border: 3px solid #fff !important; background: #FFD700 !important; color: #000 !important; z-index: 50; }
         .focused i, .focused span, .focused div { color: #000 !important; }
         #vid-box.focused { border: 4px solid var(--gold-main) !important; background: transparent !important; }
+        
+        /* Preenchimento Total da Tela Cheia */
         #vid-box.fs, #vid-box.fs.focused { border: none !important; width: 100% !important; height: 100% !important; z-index: 9999 !important; position: fixed !important; top: 0 !important; left: 0 !important; background: #000 !important; }
+
+        /* ORIENTAÇÃO FORÇADA PARA MOBILE (BLOQUEIO VERTICAL) */
+        #rotate-layer { display: none; background: #000; z-index: 99999; flex-direction: column; text-align: center; }
+        .rotate-icon { font-size: 10vh; color: var(--gold-main); margin-bottom: 3vh; animation: rotate-phone 2s infinite ease-in-out; }
+        .rotate-msg { font-size: 3vh; font-weight: 900; color: #fff; }
+        @keyframes rotate-phone { 
+            0%, 100% { transform: rotate(0deg); opacity: 0; } 
+            25%, 50% { transform: rotate(-90deg); opacity: 1; } 
+            75% { transform: rotate(-90deg); opacity: 0; } 
+        }
+        @media screen and (orientation: portrait) {
+            #rotate-layer { display: flex !important; }
+            #login-layer, #dash-layer, #content-layer, #settings-layer, #loader { display: none !important; }
+        }
 
         /* UI Base */
         .login-box { width: 450px; max-width: 90%; padding: 40px; background: #0a0a0a; border: 2px solid #FFD700; border-radius: 8px; text-align: center; }
@@ -85,8 +104,8 @@
         .item.playing { color: var(--gold-main); background: #111; border-left: 4px solid var(--gold-main); }
         .fav-icon { float: right; color: var(--gold-main); }
 
-        /* PLAYER OTIMIZADO - SEM CANVAS, SEM VAZAMENTO DE MEMÓRIA */
-        .vid-box { width: 100%; height: 50vh; background: #050505; position: relative; border-bottom: 2px solid #222; overflow: hidden; }
+        /* PLAYER SEM CANVAS, COM PREENCHIMENTO TOTAL */
+        .vid-box { width: 100%; height: 50vh; background: #050505; position: relative; border-bottom: 2px solid #222; overflow: hidden; touch-action: manipulation; }
         #player-container { width:100%; height:100%; background:#000; display: flex; align-items: center; justify-content: center; }
         video { width: 100%; height: 100%; object-fit: fill; background: transparent; z-index: 1; }
 
@@ -109,6 +128,11 @@
     </style>
 </head>
 <body onload="App.init()">
+
+    <div id="rotate-layer" class="layer flex-center">
+        <i class="fas fa-mobile-alt rotate-icon"></i>
+        <div class="rotate-msg">POR FAVOR<br><span style="color: #FFD700">GIRE A TELA</span></div>
+    </div>
 
     <div id="loader" class="hide flex-center">
         <i class="fas fa-circle-notch fa-spin" style="margin-bottom:20px; font-size: 8vh;"></i>
@@ -208,13 +232,21 @@
     </div>
 
     <script>
-        /* === MOTOR ULTIMATE - OTIMIZADO PARA TVS PHILCO (SEM CANVAS/SEM LEAK) === */
+        /* === MOTOR ULTIMATE - HÍBRIDO (PHILCO OTIMIZADA + MOBILE EXPERIÊNCIA COMPLETA) === */
         
         function safePlay(vidElement) {
             if (!vidElement) return;
             try { 
                 var p = vidElement.play(); 
                 if (p !== undefined && typeof p.catch === 'function') { p.catch(function(e) { console.log("Play prevent by browser"); }); } 
+            } catch (e) {}
+        }
+
+        function requestNativeFullscreen(elem) {
+            var target = elem || document.documentElement;
+            try {
+                if (target.requestFullscreen) { var p = target.requestFullscreen(); if(p !== undefined && typeof p.catch === 'function') { p.catch(function(){}); } } 
+                else if (target.webkitRequestFullscreen) { target.webkitRequestFullscreen(); }
             } catch (e) {}
         }
 
@@ -252,12 +284,12 @@
                 this.video.addEventListener('waiting', function() { PlayerEngine.showBuffer('CARREGANDO...'); });
             },
 
-            /* A MAGIA ACONTECE AQUI: Recicla o player em vez de criar um novo (Evita Reboot da Philco) */
+            /* Recicla o player em vez de criar um novo (Evita Reboot da Philco e Leak de Memória) */
             recyclePlayer: function() {
                 if(this.video) {
                     this.video.pause();
                     this.video.removeAttribute('src');
-                    try { this.video.load(); } catch(e){} /* Limpa a memória VRAM da TV */
+                    try { this.video.load(); } catch(e){} 
                 }
             },
 
@@ -320,8 +352,13 @@
         var App = {
             scr: 0, zone: 0, idx: 0, lastCatIdx: 0, creds: {}, fullData: [], globalData: null, playingId: null,
             cfg: { filter: false, format: 'ts_native' }, pageSize: 40, mobileRenderedPages: 1, 
+            lastTap: 0, tapTimer: null,
 
             pad: function(n) { return (n < 10) ? ("0" + n) : n; },
+            
+            /* Busca Global Inteligente Restabelecida */
+            smartSort: function(a, b) { var nameA = (a.name || a.title || "").toLowerCase(); var nameB = (b.name || b.title || "").toLowerCase(); try { return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' }); } catch (e) { return nameA < nameB ? -1 : 1; } },
+            removeAccents: function(s) { if(!s) return ""; var str = s.toLowerCase(); str = str.replace(/[áàãâä]/g, 'a'); str = str.replace(/[éèêë]/g, 'e'); str = str.replace(/[íìîï]/g, 'i'); str = str.replace(/[óòõôö]/g, 'o'); str = str.replace(/[úùûü]/g, 'u'); str = str.replace(/[ç]/g, 'c'); return str; },
 
             init: function() {
                 FavManager.init(); PlayerEngine.init(); setInterval(this.updateClock, 1000); this.updateClock();
@@ -353,7 +390,7 @@
             login: function(isAuto) {
                 var h = document.getElementById('i0').value.trim(); var u = document.getElementById('i1').value.trim(); var p = document.getElementById('i2').value.trim();
                 if(h.endsWith('/')) h = h.slice(0, -1); if(h.indexOf('http') === -1) h = 'http://' + h;
-                if(!isAuto) { document.getElementById('loader').classList.remove('hide'); } 
+                if(!isAuto) { document.getElementById('loader').classList.remove('hide'); requestNativeFullscreen(document.documentElement); } 
                 this.req(h+"/player_api.php?username="+u+"&password="+p, function(d){
                     document.getElementById('loader').classList.add('hide');
                     if(d === 'ERR') { if(!isAuto) { App.setScr(0); document.getElementById('msg-login').innerHTML = 'Falha na Conexão'; } return; }
@@ -376,7 +413,7 @@
                 this.scr=n; this.zone=0; this.idx=0; this.updateFocus();
             },
 
-            openSettings: function() { this.setScr(3); this.idx = 0; this.updateFocus(); }, closeSettings: function() { this.setScr(1); this.idx=3; this.updateFocus(); },
+            openSettings: function() { this.setScr(3); this.idx = 0; this.updateFocus(); requestNativeFullscreen(); }, closeSettings: function() { this.setScr(1); this.idx=3; this.updateFocus(); },
 
             openMode: function(mode) {
                 this.fullData = []; document.getElementById('cat-list').innerHTML = ''; document.getElementById('item-list').innerHTML = '';
@@ -397,11 +434,9 @@
                         document.getElementById('cat-list').innerHTML = h.join(''); App.zone=0; App.idx=0; App.updateFocus();
                     }
                 });
-                // Pré-carrega tudo para facilitar busca rápida, em background
-                this.req(this.creds.h+"/player_api.php?username="+this.creds.u+"&password="+this.creds.p+"&action="+actionStrm, function(d){ if(d && d!=='ERR') { App.globalData = d; document.getElementById('item-count').innerText = "TOTAL: " + d.length; } });
             },
 
-            catClick: function(i) { this.idx=i; this.zone=0; this.loadContent(i); },
+            catClick: function(i) { this.idx=i; this.zone=0; this.loadContent(i); requestNativeFullscreen(); },
 
             loadContent: function(catIdx) {
                 document.getElementById('item-list').innerHTML = '<div style="padding:20px; text-align:center;">CARREGANDO...</div>'; 
@@ -449,7 +484,7 @@
                 document.getElementById('item-list').insertAdjacentHTML('beforeend', h.join('')); this.mobileRenderedPages++;
             },
 
-            itemClick: function(i) { this.idx=i; this.zone=2; this.updateFocus(); var item = this.fullData[this.idx]; if(item) { if (App.currentMode === 'series' && item.series_id && !item.is_episode) { App.loadEpisodes(item.series_id); } else { this.playStream(item); } } },
+            itemClick: function(i) { this.idx=i; this.zone=2; this.updateFocus(); var item = this.fullData[this.idx]; if(item) { if (App.currentMode === 'series' && item.series_id && !item.is_episode) { App.loadEpisodes(item.series_id); } else { this.playStream(item); } } requestNativeFullscreen(); },
 
             loadEpisodes: function(series_id) {
                 App.seriesDataCache = App.fullData; App.lastSeriesIdx = App.idx; document.getElementById('item-list').innerHTML = '<div style="padding:20px; text-align:center; color: #FFD700;"><i class="fas fa-circle-notch fa-spin"></i></div>';
@@ -486,23 +521,95 @@
             },
 
             doSearch: function() {
-                var rawT = document.getElementById('search').value.toLowerCase(); if(rawT.length === 0) { if(App.lastCatIdx !== undefined) { App.loadContent(App.lastCatIdx); } return; }
-                if(!App.globalData) return;
-                document.getElementById('item-list').innerHTML = '<div style="padding:20px; text-align:center; color: #FFD700;"><i class="fas fa-circle-notch fa-spin"></i></div>';
-                var res = []; var maxResults = 50; 
-                for(var i=0; i<App.globalData.length; i++) { 
-                    var nome = (App.globalData[i].name || App.globalData[i].title || "").toLowerCase();
-                    if(nome.indexOf(rawT) > -1) { res.push(App.globalData[i]); if(res.length >= maxResults) break; } 
+                var rawT = document.getElementById('search').value; 
+                if(rawT.length === 0) { if(App.lastCatIdx !== undefined) { App.loadContent(App.lastCatIdx); } return; }
+                if(rawT.length < 2) return; 
+                var tStr = App.removeAccents(rawT);
+                document.getElementById('item-list').innerHTML = '<div style="padding:20px; text-align:center; color: #FFD700; font-size: 30px;"><i class="fas fa-circle-notch fa-spin"></i></div>';
+                
+                var actionStrm = App.currentMode === 'live' ? 'get_live_streams' : (App.currentMode === 'movie' ? 'get_vod_streams' : 'get_series');
+                App.req(App.creds.h+"/player_api.php?username="+App.creds.u+"&password="+App.creds.p+"&action="+actionStrm, function(d){ 
+                    if(d && d!=='ERR') { 
+                        var res = []; var maxResults = 80; var junk = ['adulto','xxx','sex','porn','+18','teste','off'];
+                        for(var i=0; i<d.length; i++) { 
+                            var nome = d[i].name || d[i].title || ""; var show = true;
+                            if(App.cfg.filter) { var lowerNome = nome.toLowerCase(); for(var j=0; j<junk.length; j++) { if(lowerNome.indexOf(junk[j]) > -1) { show = false; break; } } }
+                            if(show && App.removeAccents(nome).indexOf(tStr) > -1) { res.push(d[i]); if(res.length >= maxResults) break; } 
+                        }
+                        d = null; 
+                        res.sort(App.smartSort);
+                        App.fullData = res; App.renderList(); App.zone = 2; App.idx = 0; App.updateFocus(); 
+                    }
+                }); 
+            },
+
+            seek: function(sec) {
+                if(App.currentMode === 'live') return; 
+                var v = document.getElementById('player');
+                if(v && v.duration) { v.currentTime += sec; }
+            },
+            
+            /* GESTÃO DE TOQUE PARA SMARTPHONE (100% PREENCHIMENTO E CONTROLES) */
+            handleVideoTap: function(e) {
+                e.preventDefault(); 
+                if(!App.playingId) return; 
+
+                App.zone = 3; 
+                App.updateFocus();
+
+                var now = new Date().getTime();
+                var timeDiff = now - (App.lastTap || 0);
+                App.lastTap = now;
+
+                var rect = document.getElementById('vid-box').getBoundingClientRect();
+                var clientX = e.clientX;
+                if(e.changedTouches && e.changedTouches.length > 0) clientX = e.changedTouches[0].clientX;
+                var x = (clientX || rect.width / 2) - rect.left;
+                var width = rect.width;
+
+                if (timeDiff < 300 && timeDiff > 0) {
+                    clearTimeout(App.tapTimer);
+                    if (App.currentMode !== 'live') {
+                        if (x < width * 0.33) { App.seek(-15); } 
+                        else if (x > width * 0.66) { App.seek(15); } 
+                        else { App.toggleFull(); }
+                    } else {
+                        App.toggleFull(); 
+                    }
+                } else {
+                    App.tapTimer = setTimeout(function() {
+                        if (App.currentMode !== 'live') { App.togglePlay(); } 
+                        else { App.toggleFull(); }
+                    }, 300);
                 }
-                App.fullData = res; App.renderList(); App.zone = 2; App.idx = 0; App.updateFocus(); 
             },
             
             togglePlay: function() { if(App.currentMode === 'live') return; var v = document.getElementById('player'); var layer = document.getElementById('pause-layer'); if(!v) return; if(v.paused) { v.play(); layer.style.display = 'none'; } else { v.pause(); layer.style.display = 'flex'; } }, 
-            toggleFull: function() { if(!this.playingId) return; var b = document.getElementById('vid-box'); if(b.classList.contains('fs')) { b.classList.remove('fs'); document.getElementById('pause-layer').style.display = 'none'; try { document.exitFullscreen(); } catch(e){} } else { b.classList.add('fs'); try{ b.requestFullscreen(); }catch(e){} } },
+            toggleFull: function() { 
+                if(!this.playingId) return; 
+                var b = document.getElementById('vid-box'); 
+                if(b.classList.contains('fs')) { 
+                    b.classList.remove('fs'); 
+                    document.getElementById('pause-layer').style.display = 'none'; 
+                    try { document.exitFullscreen(); } catch(e){} 
+                    this.syncFocusToPlaying();
+                } else { 
+                    b.classList.add('fs'); 
+                    try{ requestNativeFullscreen(b); }catch(e){} 
+                } 
+            },
             
+            syncFocusToPlaying: function() {
+                if(!this.playingId) return;
+                for(var i=0; i<this.fullData.length; i++) {
+                    var id = this.fullData[i].stream_id || this.fullData[i].series_id || this.fullData[i].id;
+                    if(id == this.playingId) { this.idx = i; this.updateFocus(); return; }
+                }
+            },
+
             back: function() {
                 if(document.getElementById('vid-box').classList.contains('fs')) { this.toggleFull(); return; }
-                if(this.zone===3) { this.zone=2; this.updateFocus(); return; }
+                if(this.zone===3) { this.zone=2; this.syncFocusToPlaying(); this.updateFocus(); return; }
                 if(this.zone===2) { if(App.currentMode === 'series' && App.fullData.length > 0 && App.fullData[0].is_episode) { App.fullData = App.seriesDataCache; App.idx = App.lastSeriesIdx; App.renderList(true); return; } this.zone=0; this.idx=this.lastCatIdx; this.updateFocus(); return; }
                 if(this.zone===1) { this.zone=2; this.idx=0; this.updateFocus(); return; }
                 if(this.zone===0) { this.setScr(1); return; }
@@ -528,7 +635,7 @@
                 if(this.scr===1) { if(this.idx === 0) { if(d===3) this.idx=1; else if(d===0) this.idx=3; } else if(this.idx === 1) { if(d===3) this.idx=2; else if(d===2) this.idx=0; else if(d===0) this.idx=3; } else if(this.idx === 2) { if(d===2) this.idx=1; else if(d===0) this.idx=3; } else if(this.idx === 3) { if(d===3) this.idx=4; else if(d===1) this.idx=0; } else if(this.idx === 4) { if(d===2) this.idx=3; else if(d===1) this.idx=2; } }
                 if(this.scr===3) { if(this.idx === 0) { if(d===1) this.idx = 1; } else if(this.idx === 1) { if(d===1) this.idx = 2; else if(d===0) this.idx = 0; } else if(this.idx === 2) { if(d===3) this.idx = 3; else if(d===1) this.idx = 3; else if(d===0) this.idx = 1; } else if(this.idx === 3) { if(d===0) this.idx = 2; } }
                 if(this.scr===2) {
-                    if(this.zone===3) { if(d===2) { this.zone=2; this.updateFocus(); } return; }
+                    if(this.zone===3) { if(d===2) { this.zone=2; this.syncFocusToPlaying(); this.updateFocus(); } return; }
                     if(this.zone===0) { var max = document.getElementById('cat-list').children.length-1; if(d===1 && this.idx<max) this.idx++; if(d===0 && this.idx>0) this.idx--; if(d===3 && App.fullData.length>0) { this.zone=2; this.idx=0; } }
                     else if(this.zone===2) { 
                         var len = App.fullData.length;
@@ -550,6 +657,7 @@
 
         document.addEventListener('keydown', function(e) {
             var k=e.keyCode;
+            if(document.activeElement && document.activeElement.tagName === 'INPUT' && App.scr === 0) { if(k === 13 || k === 40) { e.preventDefault(); App.move(1); return; } if(k === 38) { e.preventDefault(); App.move(0); return; } return; }
             if(App.scr === 2 && App.zone === 1 && k === 13) { App.doSearch(); return; }
             if(k===48 || k===96) { if(App.scr===2 && App.zone===2) { var it=App.fullData[App.idx]; if(it) { FavManager.toggle(it.stream_id || it.series_id || it.id); } } }
             

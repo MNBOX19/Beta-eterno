@@ -422,8 +422,8 @@
 
         var App = {
             validCategories: null, scr: 0, zone: 0, idx: 0, lastCatIdx: -1, creds: {}, fullData: [], playingId: null,
-            cfg: { filter: false, format: 'ts_native', lang: 'pt' }, userInfo: null, lastEnter: 0, touchTimer: null,
-            categoryDataCache: null, searchTimer: null, showingEpisodes: false, lastScreenSwitch: 0,
+            cfg: { filter: false, format: 'ts_native', lang: 'pt' }, userInfo: null, lastEnter: 0,
+            categoryDataCache: null, showingEpisodes: false, lastScreenSwitch: 0,
             seriesDataCache: null, lastSeriesIdx: 0, sessionStartTime: null, refreshInterval: 4 * 60 * 60 * 1000, refreshTimer: null,
             lastTap: 0, tapTimer: null, pageSize: 60, mobileRenderedPages: 1, 
 
@@ -516,6 +516,39 @@
 
             openSettings: function() { this.setScr(3); this.idx = 0; this.updateFocus(); requestNativeFullscreen(); }, closeSettings: function() { this.setScr(1); this.idx=3; this.updateFocus(); },
 
+            /* SISTEMA DE CONTAGEM GLOBAL ABSOLUTO (Roda invisível e joga o lixo fora) */
+            countGlobal: function(mode) {
+                var actionStrm = mode === 'live' ? 'get_live_streams' : (mode === 'movie' ? 'get_vod_streams' : 'get_series');
+                var t = App.i18n[App.cfg.lang];
+                var typeStr = mode === 'live' ? t.tot_chan : (mode === 'movie' ? t.tot_mov : t.tot_ser);
+                var countEl = document.getElementById('item-count');
+                
+                var cacheKey = 'rc_total_' + mode + '_' + App.creds.u;
+                var cached = localStorage.getItem(cacheKey);
+                if(cached) { 
+                    if(countEl) countEl.innerText = t.tot_pre + cached + " " + typeStr; 
+                } else {
+                    if(countEl) countEl.innerText = "CONTANDO...";
+                }
+
+                this.req(this.creds.h+"/player_api.php?username="+this.creds.u+"&password="+this.creds.p+"&action="+actionStrm, function(d){
+                    if(d && d!=='ERR_NET') {
+                        var total = 0;
+                        var junk = ['adulto','xxx','sex','porn','+18','teste','off','expirado'];
+                        if(App.cfg.filter) {
+                            for(var i=0; i<d.length; i++) {
+                                var nome = (d[i].name || d[i].title || "").toLowerCase(); var show = true;
+                                for(var j=0; j<junk.length; j++) { if(nome.indexOf(junk[j]) > -1) { show = false; break; } }
+                                if(show) total++;
+                            }
+                        } else { total = d.length; }
+                        d = null; // Libera toda a memória RAM instantaneamente!
+                        try { localStorage.setItem(cacheKey, total); } catch(e) {}
+                        if(countEl) countEl.innerText = t.tot_pre + total + " " + typeStr;
+                    }
+                });
+            },
+
             openMode: function(mode, isTrusted) {
                 if (!isTrusted && new Date().getTime() - (this.lastScreenSwitch || 0) < 500) return;
                 
@@ -527,18 +560,20 @@
                 mode = mode || 'live'; App.currentMode = mode; PlayerEngine.hardStop(); this.resetInfo(); requestNativeFullscreen();
                 this.playingId = null; this.page = 0; this.validCategories = null; this.setScr(2);
                 var t = App.i18n[App.cfg.lang]; document.getElementById('search').value = ''; 
-                var countEl = document.getElementById('item-count'); if(countEl) countEl.innerText = "CATEGORIAS...";
+                
+                // Dispara a contagem global absoluta em segundo plano
+                setTimeout(function() { App.countGlobal(mode); }, 500); 
                 
                 var actionCat = mode === 'live' ? 'get_live_categories' : (mode === 'movie' ? 'get_vod_categories' : 'get_series_categories');
                 var cacheKey = 'rc_cats_' + mode + '_' + this.creds.u;
 
                 var renderCats = function(d) {
-                    var h = []; h.push('<div class="cat-item" role="button" tabindex="-1" id="c0" data-id="fav" onclick="App.catClick(0)">' + t.cat_fav + '</div>'); 
+                    var h = []; h.push('<div class="cat-item" role="button" tabindex="-1" id="c0" data-id="fav" onclick="App.catClick(0, true)">' + t.cat_fav + '</div>'); 
                     var count = 0; var junk = ['adulto','xxx','sex','porn','+18','teste','off','expirado']; App.validCategories = {};
                     for(var i=0;i<d.length;i++) {
                         var nome = d[i].category_name; var show = true;
                         if(App.cfg.filter) { var lower = nome.toLowerCase(); for(var j=0; j<junk.length; j++) { if(lower.indexOf(junk[j]) > -1) { show = false; break; } } }
-                        if(show) { count++; h.push('<div class="cat-item" role="button" tabindex="-1" id="c'+count+'" data-id="'+d[i].category_id+'" onclick="App.catClick('+count+')">'+nome+'</div>'); App.validCategories[String(d[i].category_id)] = true; }
+                        if(show) { count++; h.push('<div class="cat-item" role="button" tabindex="-1" id="c'+count+'" data-id="'+d[i].category_id+'" onclick="App.catClick('+count+', true)">'+nome+'</div>'); App.validCategories[String(d[i].category_id)] = true; }
                     }
                     document.getElementById('cat-list').innerHTML = h.join(''); 
                     if(App.zone===0 && App.idx===0) { App.updateFocus(); }
@@ -560,14 +595,12 @@
             
             catClick: function(i, isTrusted) { 
                 if (!isTrusted && new Date().getTime() - (this.lastScreenSwitch || 0) < 500) return;
-                
                 if (i === -1) return;
                 this.idx=i; this.zone=0; 
-                this.loadContent(i); 
-                this.updateFocus(); 
+                this.loadContent(i, true); // O TRUE avisa o sistema que o usuário clicou e que o foco deve pular
             },
 
-            loadContent: function(catIdx) {
+            loadContent: function(catIdx, jumpFocus) {
                 if (catIdx === -1) return;
                 App.showingEpisodes = false;
                 document.getElementById('item-list').innerHTML = ''; this.page = 0; this.lastCatIdx = catIdx; var el = document.getElementById('c'+catIdx); if(!el) return;
@@ -585,6 +618,12 @@
                         } else { App.fullData = d; }
                         
                         App.categoryDataCache = App.fullData;
+                        
+                        // O salto inteligente para o primeiro item da lista:
+                        if(jumpFocus && App.fullData.length > 0) {
+                            App.zone = 2; App.idx = 0;
+                        }
+                        
                         App.renderList(); 
                     } else { document.getElementById('item-list').innerHTML = '<div style="padding:20px; text-align:center;">'+t.empty+'</div>'; }
                 };
@@ -593,7 +632,9 @@
                     this.req(this.creds.h+"/player_api.php?username="+this.creds.u+"&password="+this.creds.p+"&action="+actionStrm, function(d){ 
                         if(d && d!=='ERR_NET') { 
                             var favs = d.filter(function(x){ var fId = x.stream_id || x.series_id || x.id; return FavManager.isFav(fId); }); 
-                            App.fullData = favs; App.categoryDataCache = favs; App.renderList(); 
+                            App.fullData = favs; App.categoryDataCache = favs; 
+                            if(jumpFocus && favs.length > 0) { App.zone = 2; App.idx = 0; }
+                            App.renderList(); 
                         } 
                     }); 
                 } 
@@ -616,15 +657,11 @@
             renderList: function() {
                 var d = this.fullData; var max = d.length; var t = App.i18n[App.cfg.lang]; var listEl = document.getElementById('item-list'); 
                 
-                /* CONTADOR ATUALIZADO: Mostra sempre o total real do que está na tela! */
-                var countEl = document.getElementById('item-count'); 
-                if(countEl) countEl.innerText = t.tot_pre + max;
-
                 if(max===0) { listEl.innerHTML = '<div style="padding:20px; text-align:center;">'+t.empty+'</div>'; return; }
                 
                 var start = 0; var end = max;
                 
-                /* BYPASS: Live TV e Séries Episódios renderizam sem limite de DOM! */
+                /* BYPASS: Live TV e Séries não possuem limite. Filmes usa limite para poupar RAM! */
                 var bypassLimit = (App.showingEpisodes || App.currentMode === 'live');
                 
                 if (!bypassLimit) {
@@ -639,7 +676,7 @@
                     var n = d[i].name || d[i].title; var id = d[i].stream_id || d[i].series_id || d[i].id; var icn = FavManager.isFav(id) ? '<i class="fas fa-star fav-icon"></i>' : '';
                     
                     var playingClass = (App.playingId == id) ? ' playing' : ''; 
-                    h.push('<div class="item' + playingClass + '" role="button" tabindex="-1" id="row-'+i+'" onclick="App.itemClick('+i+')">'+n+icn+'</div>');
+                    h.push('<div class="item' + playingClass + '" role="button" tabindex="-1" id="row-'+i+'" onclick="App.itemClick('+i+', true)">'+n+icn+'</div>');
                 }
                 listEl.innerHTML = h.join(''); 
                 
@@ -659,7 +696,7 @@
                 for(var i = start; i < end; i++) {
                     var n = this.fullData[i].name || this.fullData[i].title; var id = this.fullData[i].stream_id || this.fullData[i].series_id || this.fullData[i].id; var icn = FavManager.isFav(id) ? '<i class="fas fa-star fav-icon"></i>' : '';
                     var playingClass = (App.playingId == id) ? ' playing' : ''; 
-                    h.push('<div class="item' + playingClass + '" role="button" tabindex="-1" id="row-'+i+'" onclick="App.itemClick('+i+')">'+n+icn+'</div>');
+                    h.push('<div class="item' + playingClass + '" role="button" tabindex="-1" id="row-'+i+'" onclick="App.itemClick('+i+', true)">'+n+icn+'</div>');
                 }
                 document.getElementById('item-list').insertAdjacentHTML('beforeend', h.join('')); this.mobileRenderedPages++;
             },
@@ -784,7 +821,6 @@
                                 App.renderList(); 
                             } else {
                                 listEl.innerHTML = '<div style="padding:20px; text-align:center;">Nenhum resultado encontrado no servidor global.</div>';
-                                var countEl = document.getElementById('item-count'); if(countEl) countEl.innerText = App.i18n[App.cfg.lang].tot_pre + "0";
                             }
                         } else {
                             listEl.innerHTML = '<div style="padding:20px; text-align:center;">Erro na conexão com o servidor.</div>';

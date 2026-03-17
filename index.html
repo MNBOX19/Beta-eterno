@@ -119,7 +119,6 @@
         #player-container { width:100%; height:100%; background:#000; transform: translateZ(0); }
         video { width: 100%; height: 100%; object-fit: fill; background: #000; z-index: 1; transform: translateZ(0); }
 
-        /* Backdrop Premium para esconder a tela preta nativa */
         #vid-backdrop {
             display:none; position:absolute; top:0; left:0; width:100%; height:100%; 
             background: radial-gradient(circle, #1a1a1a 0%, #000000 80%); z-index: 2; 
@@ -752,7 +751,7 @@
                 if(App.currentMode === 'live') return; 
                 var v = document.getElementById('player'); 
                 if(v && v.duration) { 
-                    PlayerEngine.showBuffer('CARREGANDO...'); 
+                    // Salto silencioso e invisível. Nenhuma animação ou texto é disparado.
                     v.currentTime += sec; 
                 } 
             }, 

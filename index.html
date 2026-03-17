@@ -138,6 +138,19 @@
             text-shadow: 0 0 10px #000, 0 0 20px #000;
         }
 
+        /* Animação Clássica de Avançar/Retroceder */
+        #seek-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7); padding: 2vh 4vw; border-radius: 50px;
+            color: #fff; font-size: 4vh; font-weight: 900; display: none; z-index: 60;
+            align-items: center; justify-content: center; gap: 15px;
+            animation: popIn 0.2s ease-out; border: 2px solid #333;
+        }
+        @keyframes popIn { 
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); } 
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 
+        }
+
         .meta { padding: 25px; flex: 1; height: 100%; overflow-y: auto; background: #0a0a0c; display: flex; flex-direction: column; }
         .meta-title { font-size: var(--font-lg); color: var(--main-color); font-weight: 900; margin-bottom: 1vh; }
         .meta-desc { font-size: var(--font-sm); color: #999; margin-bottom: 1vh; }
@@ -249,6 +262,11 @@
                 <div id="smart-buffer" class="buffer-overlay">
                     <i class="fas fa-circle-notch fa-spin" style="font-size: 8vh; color: var(--main-color);"></i>
                     <div class="buffer-msg" id="buffer-text" style="display:none; font-weight: bold; color: #fff; margin-top: 10px;"></div>
+                </div>
+
+                <div id="seek-overlay">
+                    <i id="seek-icon" class="fas fa-forward"></i>
+                    <span id="seek-text">+15s</span>
                 </div>
 
                 <div id="pause-layer"><i class="fas fa-pause" style="font-size: 10vh; color: rgba(255, 255, 255, 0.9); text-shadow: 0 0 20px #000;"></i></div>
@@ -436,7 +454,7 @@
             cfg: { filter: false, format: 'ts_native', lang: 'pt' }, userInfo: null, lastEnter: 0,
             categoryDataCache: null, showingEpisodes: false, lastScreenSwitch: 0,
             seriesDataCache: null, lastSeriesIdx: 0, sessionStartTime: null, refreshInterval: 2 * 60 * 60 * 1000, refreshTimer: null,
-            lastTap: 0, tapTimer: null, pageSize: 50, mobileRenderedPages: 1, memoryCleanupTimer: null,
+            lastTap: 0, tapTimer: null, pageSize: 50, mobileRenderedPages: 1, memoryCleanupTimer: null, seekTimer: null,
 
             pad: function(n) { return (n < 10) ? ("0" + n) : n; },
             smartSort: function(a, b) { var nameA = (a.name || a.title || "").toLowerCase(); var nameB = (b.name || b.title || "").toLowerCase(); try { return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' }); } catch (e) { return nameA < nameB ? -1 : 1; } },
@@ -747,12 +765,32 @@
                 var r = document.getElementById('row-'+this.idx); if(r) r.classList.add('playing'); 
             },
 
+            // Animação de Seek na tela
+            showSeekAnimation: function(sec) {
+                var el = document.getElementById('seek-overlay');
+                var icon = document.getElementById('seek-icon');
+                var txt = document.getElementById('seek-text');
+                if(!el) return;
+                
+                if(sec > 0) {
+                    icon.className = 'fas fa-forward';
+                    txt.innerText = '+' + sec + 's';
+                } else {
+                    icon.className = 'fas fa-backward';
+                    txt.innerText = sec + 's'; 
+                }
+                
+                el.style.display = 'flex';
+                if(App.seekTimer) clearTimeout(App.seekTimer);
+                App.seekTimer = setTimeout(function() { el.style.display = 'none'; }, 800);
+            },
+
             seek: function(sec) { 
                 if(App.currentMode === 'live') return; 
                 var v = document.getElementById('player'); 
                 if(v && v.duration) { 
-                    // Salto silencioso e invisível. Nenhuma animação ou texto é disparado.
                     v.currentTime += sec; 
+                    App.showSeekAnimation(sec); // Dispara a animação visual em vez da mensagem de buffer
                 } 
             }, 
             
